@@ -49,9 +49,15 @@ class CreateEntryFragment : Fragment() {
 
         binding.etDate.setOnClickListener {
             val calendar = Calendar.getInstance()
-            DatePickerDialog(requireContext(), { _, year, month, day ->
-                binding.etDate.setText(String.format("%04d-%02d-%02d", year, month + 1, day))
-            }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
+            DatePickerDialog(
+                requireContext(),
+                { _, year, month, day ->
+                    binding.etDate.setText(String.format("%04d-%02d-%02d", year, month + 1, day))
+                },
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH)
+            ).show()
         }
 
         CoroutineScope(Dispatchers.IO).launch {
@@ -112,19 +118,27 @@ class CreateEntryFragment : Fragment() {
                         clearFields()
                     }
 
-                    // ✅ Upload to Firebase
+                    // ✅ Upload to Firebase using Expense data class
                     val firebaseService = com.example.personalbudgetingapp.data.FirebaseService()
-                    firebaseService.uploadExpense(
+                    val expense = com.example.personalbudgetingapp.model.Expense(
                         amount = amount,
                         category = categoryName,
                         description = description,
-                        dateString = date
-                    ) { success ->
+                        date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(date)
+                            ?: Date()
+                    )
+
+                    firebaseService.uploadExpense(expense) { success ->
                         CoroutineScope(Dispatchers.Main).launch {
                             if (success) {
-                                Toast.makeText(context, "Synced to Firebase", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Synced to Firebase", Toast.LENGTH_SHORT)
+                                    .show()
                             } else {
-                                Toast.makeText(context, "Failed to sync with Firebase", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    context,
+                                    "Failed to sync with Firebase",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         }
                     }
@@ -135,10 +149,9 @@ class CreateEntryFragment : Fragment() {
                 }
             }
         }
-
     }
 
-    private fun createImageFile(): File {
+        private fun createImageFile(): File {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val storageDir = requireContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES)
         return File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)

@@ -1,5 +1,6 @@
 package com.example.personalbudgetingapp
 
+import android.app.AlertDialog
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -8,30 +9,14 @@ import com.bumptech.glide.Glide
 import com.example.personalbudgetingapp.databinding.ItemEntryBinding
 
 class EntryAdapter(
-    private val entries: List<ExpenseEntry>,
+    private var entries: List<ExpenseEntry>,
     private val categories: List<Category>,
-    private val onItemClick: (ExpenseEntry) -> Unit
+    private val onEditClicked: (ExpenseEntry) -> Unit,
+    private val onDeleteClicked: (ExpenseEntry) -> Unit
 ) : RecyclerView.Adapter<EntryAdapter.EntryViewHolder>() {
 
-    inner class EntryViewHolder(val binding: ItemEntryBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(entry: ExpenseEntry) {
-            val category = categories.find { it.id == entry.categoryId }
-            with(binding) {
-                tvEntryDescription.text = entry.description
-                tvEntryDetails.text = "Category: ${category?.name}, Amount: R${entry.amount}, Date: ${entry.date}"
-                if (!entry.photoUri.isNullOrEmpty()) {
-                    ivEntryPhoto.visibility = View.VISIBLE
-                    Glide.with(root.context).load(entry.photoUri).into(ivEntryPhoto)
-                } else {
-                    ivEntryPhoto.visibility = View.GONE
-                }
-
-                root.setOnClickListener {
-                    onItemClick(entry)
-                }
-            }
-        }
-    }
+    inner class EntryViewHolder(val binding: ItemEntryBinding) :
+        RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): EntryViewHolder {
         val binding = ItemEntryBinding.inflate(LayoutInflater.from(parent.context), parent, false)
@@ -39,8 +24,33 @@ class EntryAdapter(
     }
 
     override fun onBindViewHolder(holder: EntryViewHolder, position: Int) {
-        holder.bind(entries[position])
+        val entry = entries[position]
+        val categoryName = categories.find { it.id == entry.categoryId }?.name ?: "Unknown"
+
+        holder.binding.tvDescription.text = entry.description
+        holder.binding.tvAmount.text = "R${entry.amount}"
+        holder.binding.tvCategory.text = categoryName
+        holder.binding.tvDate.text = entry.date
+
+        holder.itemView.setOnLongClickListener {
+            AlertDialog.Builder(holder.itemView.context)
+                .setTitle("Select Action")
+                .setItems(arrayOf("Edit", "Delete")) { _, which ->
+                    when (which) {
+                        0 -> onEditClicked(entry)
+                        1 -> onDeleteClicked(entry)
+                    }
+                }
+                .show()
+            true
+        }
     }
 
-    override fun getItemCount(): Int = entries.size
+    override fun getItemCount() = entries.size
+
+    fun updateData(newData: List<ExpenseEntry>) {
+        entries = newData
+        notifyDataSetChanged()
+    }
 }
+

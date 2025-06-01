@@ -22,6 +22,7 @@ import kotlinx.parcelize.Parcelize
 )
 data class ExpenseEntry(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    var firebaseId: String? = null,
     val date: String,
     val description: String,
     val categoryId: Int,

@@ -4,53 +4,43 @@ import android.util.Log
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import java.text.SimpleDateFormat
+import com.example.personalbudgetingapp.model.Expense
 import java.util.*
 
 class FirebaseService {
 
     private val db = FirebaseFirestore.getInstance()
-    private val userId = FirebaseAuth.getInstance().currentUser?.uid
+    private val auth = FirebaseAuth.getInstance()
 
-    fun uploadExpense(
-        amount: Double,
-        category: String,
-        description: String,
-        dateString: String,
-        onComplete: (Boolean) -> Unit
-    ) {
+    fun uploadExpense(expense: Expense, onComplete: (Boolean) -> Unit) {
+        val userId = auth.currentUser?.uid
+
         if (userId == null) {
+            Log.e("Firebase", "User not authenticated.")
             onComplete(false)
             return
         }
 
-        val date: Date? = try {
-            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(dateString)
-        } catch (e: Exception) {
-            null
-        }
-
-        if (date == null) {
-            onComplete(false)
-            return
-        }
+        val date = Timestamp(expense.date)
 
         val expenseMap = hashMapOf(
-            "amount" to amount,
-            "category" to category,
-            "description" to description,
-            "date" to Timestamp(date),
-            "userId" to userId
+            "amount" to expense.amount,
+            "category" to expense.category,
+            "description" to expense.description,
+            "date" to date
         )
 
+        // ✅ Save to subcollection: expenses/{userId}/user_expense_entries/{auto_id}
         db.collection("expenses")
+            .document(userId)
+            .collection("user_expense_entries")
             .add(expenseMap)
             .addOnSuccessListener {
-                Log.d("Firebase", "Expense synced successfully")
+                Log.d("Firebase", "Expense uploaded successfully")
                 onComplete(true)
             }
             .addOnFailureListener { e ->
-                Log.e("Firebase", "Sync failed", e)
+                Log.e("Firebase", "Upload failed", e)
                 onComplete(false)
             }
     }

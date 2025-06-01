@@ -23,5 +23,17 @@
             android:id="@+id/barChart"
             android:layout_width="match_parent"
             android:layout_height="300dp" />
+
+        <TextView
+            android:id="@+id/tvBudgetSummary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Calculating budget summary..."
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:paddingTop="24dp"
+            android:paddingBottom="8dp"
+            />
+
     </LinearLayout>
 </ScrollView>
