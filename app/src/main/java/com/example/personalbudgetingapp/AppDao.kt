@@ -53,4 +53,8 @@ interface AppDao {
 
     @Query("SELECT * FROM budget_goals WHERE id = 1")
     suspend fun getBudgetGoal(): BudgetGoal?
+
+    @Query("SELECT * FROM expense_entries WHERE userId = :userId")
+    suspend fun getAllEntriesForUser(userId: String): List<ExpenseEntry>
+
 }

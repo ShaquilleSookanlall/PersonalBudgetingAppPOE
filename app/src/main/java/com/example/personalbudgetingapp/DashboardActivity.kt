@@ -11,6 +11,7 @@ import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.io.File
 
 class DashboardActivity : BaseActivity() {
 
@@ -84,12 +85,44 @@ class DashboardActivity : BaseActivity() {
                     loadFragment(DashboardFragment()) // ✅ Load graph-based dashboard
                     true
                 }
-
                 R.id.nav_profile -> {
                     loadFragment(ProfileFragment())
                     true
                 }
                 else -> false
+            }
+        }
+
+        // ✅ Export to CSV
+        binding.btnExportCSV.setOnClickListener {
+            CoroutineScope(Dispatchers.IO).launch {
+                val userId = auth.currentUser?.uid ?: return@launch
+                val entries = db.appDao().getAllEntriesForUser(userId)
+
+                if (entries.isEmpty()) {
+                    runOnUiThread {
+                        Toast.makeText(this@DashboardActivity, "No entries to export", Toast.LENGTH_SHORT).show()
+                    }
+                    return@launch
+                }
+
+                val csvBuilder = StringBuilder()
+                csvBuilder.append("Date,Description,Amount,Category,PhotoUri\n")
+
+                val categories = db.appDao().getAllCategories().associateBy { it.id }
+
+                for (entry in entries) {
+                    val categoryName = categories[entry.categoryId]?.name ?: "Unknown"
+                    csvBuilder.append("${entry.date},\"${entry.description}\",${entry.amount},$categoryName,${entry.photoUri ?: ""}\n")
+                }
+
+                val fileName = "expense_export_${System.currentTimeMillis()}.csv"
+                val file = File(getExternalFilesDir(null), fileName)
+                file.writeText(csvBuilder.toString())
+
+                runOnUiThread {
+                    Toast.makeText(this@DashboardActivity, "Exported to ${file.absolutePath}", Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
@@ -121,10 +154,6 @@ class DashboardActivity : BaseActivity() {
                 }
             }
         }
-    }
-
-    private fun showComingSoon(feature: String) {
-        Toast.makeText(this, "$feature feature coming in Part 3!", Toast.LENGTH_SHORT).show()
     }
 
     companion object {
