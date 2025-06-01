@@ -1,6 +1,5 @@
 package com.example.personalbudgetingapp
 
-import android.util.Log
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
@@ -11,6 +10,7 @@ import androidx.room.Upsert
 @Dao
 interface AppDao {
 
+    // Expense Entries
     @Insert
     suspend fun insertExpenseEntry(entry: ExpenseEntry)
 
@@ -18,26 +18,17 @@ interface AppDao {
     suspend fun deleteExpenseEntry(entry: ExpenseEntry)
 
     @Update
-    suspend fun updateExpenseEntry(entry: ExpenseEntry) //
+    suspend fun updateExpenseEntry(entry: ExpenseEntry)
 
+    @Query("SELECT * FROM expense_entries")
+    suspend fun getAllExpenseEntries(): List<ExpenseEntry>
+
+    @Query("SELECT * FROM expense_entries WHERE date BETWEEN :startDate AND :endDate")
+    suspend fun getEntriesInPeriod(startDate: String, endDate: String): List<ExpenseEntry>
+
+    // Categories
     @Insert
     suspend fun insertCategory(category: Category)
-
-    @Query("SELECT * FROM expense_entries WHERE date BETWEEN :startDate AND :endDate")
-    suspend fun getEntriesInPeriod(startDate: String, endDate: String): List<ExpenseEntry> {
-        Log.d("AppDao", "getEntriesInPeriod called with startDate=$startDate, endDate=$endDate")
-        return try {
-            val entries = getEntriesInPeriodInternal(startDate, endDate)
-            Log.d("AppDao", "Found ${entries.size} entries")
-            entries
-        } catch (e: Exception) {
-            Log.e("AppDao", "Error querying entries: ${e.message}", e)
-            emptyList()
-        }
-    }
-
-    @Query("SELECT * FROM expense_entries WHERE date BETWEEN :startDate AND :endDate")
-    suspend fun getEntriesInPeriodInternal(startDate: String, endDate: String): List<ExpenseEntry>
 
     @Query("SELECT * FROM categories WHERE deleted = 0")
     suspend fun getAllCategories(): List<Category>
@@ -45,12 +36,14 @@ interface AppDao {
     @Query("UPDATE categories SET deleted = 1 WHERE id = :categoryId")
     suspend fun deleteCategoryById(categoryId: Int)
 
-    @Query("SELECT SUM(amount) FROM expense_entries WHERE categoryId = :categoryId AND date BETWEEN :startDate AND :endDate")
-    suspend fun getTotalForCategory(categoryId: Int, startDate: String, endDate: String): Double?
-
     @Query("SELECT EXISTS(SELECT 1 FROM categories WHERE name = :name AND deleted = 1)")
     suspend fun isCategoryDeletedByName(name: String): Boolean
 
+    // Totals
+    @Query("SELECT SUM(amount) FROM expense_entries WHERE categoryId = :categoryId AND date BETWEEN :startDate AND :endDate")
+    suspend fun getTotalForCategory(categoryId: Int, startDate: String, endDate: String): Double?
+
+    // Budget Goals
     @Upsert
     suspend fun setBudgetGoal(budgetGoal: BudgetGoal)
 

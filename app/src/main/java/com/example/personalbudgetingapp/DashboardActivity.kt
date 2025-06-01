@@ -81,10 +81,10 @@ class DashboardActivity : BaseActivity() {
                     true
                 }
                 R.id.nav_dashboard -> {
-                    showComingSoon("Dashboard")
-//                  loadFragment(DashboardFragment()) // for Part 3
+                    loadFragment(DashboardFragment()) // ✅ Load graph-based dashboard
                     true
                 }
+
                 R.id.nav_profile -> {
                     loadFragment(ProfileFragment())
                     true
