@@ -32,9 +32,18 @@ class EntryAdapter(
         holder.binding.tvCategory.text = categoryName
         holder.binding.tvDate.text = entry.date
 
+        if (!entry.photoUri.isNullOrEmpty()) {
+            holder.binding.ivEntryPhoto.visibility = View.VISIBLE
+            Glide.with(holder.itemView.context)
+                .load(entry.photoUri)
+                .into(holder.binding.ivEntryPhoto)
+        } else {
+            holder.binding.ivEntryPhoto.visibility = View.GONE
+        }
+
         holder.itemView.setOnLongClickListener {
             AlertDialog.Builder(holder.itemView.context)
-                .setTitle("Select Action")
+                .setTitle("Choose Action")
                 .setItems(arrayOf("Edit", "Delete")) { _, which ->
                     when (which) {
                         0 -> onEditClicked(entry)
@@ -53,4 +62,3 @@ class EntryAdapter(
         notifyDataSetChanged()
     }
 }
-
