@@ -39,9 +39,8 @@ interface AppDao {
     @Query("SELECT EXISTS(SELECT 1 FROM categories WHERE name = :name AND deleted = 1)")
     suspend fun isCategoryDeletedByName(name: String): Boolean
 
-    // Totals
-    @Query("SELECT SUM(amount) FROM expense_entries WHERE categoryId = :categoryId AND date BETWEEN :startDate AND :endDate")
-    suspend fun getTotalForCategory(categoryId: Int, startDate: String, endDate: String): Double?
+    @Query("SELECT SUM(amount) FROM expense_entries WHERE categoryId = :categoryId AND date BETWEEN :startDate AND :endDate AND userId = :userId")
+    suspend fun getTotalForCategory(categoryId: Int, startDate: String, endDate: String, userId: String): Double?
 
     // Budget Goals
     @Upsert

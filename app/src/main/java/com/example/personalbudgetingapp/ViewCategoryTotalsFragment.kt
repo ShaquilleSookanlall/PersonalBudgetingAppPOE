@@ -13,6 +13,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.Calendar
+import com.google.firebase.auth.FirebaseAuth
+
 
 class ViewCategoryTotalsFragment : Fragment() {
 
@@ -65,7 +67,7 @@ class ViewCategoryTotalsFragment : Fragment() {
             val categories = db.appDao().getAllCategories()
             val totals = mutableListOf<Pair<Category, Double>>()
             for (category in categories) {
-                val total = db.appDao().getTotalForCategory(category.id, start, end) ?: 0.0
+                val total = db.appDao().getTotalForCategory(category.id, start, end, FirebaseAuth.getInstance().currentUser?.uid ?: "") ?: 0.0
                 totals.add(category to total)
             }
             activity?.runOnUiThread {
