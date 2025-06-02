@@ -92,8 +92,17 @@ class DashboardActivity : BaseActivity() {
 
         // ✅ CSV Export placeholder (you can implement Firebase data download here)
         binding.btnExportCSV.setOnClickListener {
-            Toast.makeText(this, "Export not yet implemented with Firebase", Toast.LENGTH_SHORT).show()
+            firebaseService.exportExpensesToCSV(this) { success, message ->
+                runOnUiThread {
+                    if (success) {
+                        Toast.makeText(this, "Exported to: $message", Toast.LENGTH_LONG).show()
+                    } else {
+                        Toast.makeText(this, "Export failed: $message", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
         }
+
     }
 
     private fun loadFragment(fragment: Fragment) {

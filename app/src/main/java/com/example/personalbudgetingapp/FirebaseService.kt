@@ -1,5 +1,6 @@
 package com.example.personalbudgetingapp.data
 
+import android.content.Context
 import android.net.Uri
 import android.util.Log
 import com.example.personalbudgetingapp.Category
@@ -11,6 +12,8 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.storage.FirebaseStorage
+import java.io.File
+import java.io.FileWriter
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -217,4 +220,43 @@ class FirebaseService {
             .addOnSuccessListener { onComplete(true) }
             .addOnFailureListener { onComplete(false) }
     }
+
+    fun exportExpensesToCSV(context: Context, onComplete: (Boolean, String?) -> Unit) {
+        val userId = getUserId()
+        if (userId == null) {
+            onComplete(false, "User not authenticated.")
+            return
+        }
+
+        db.collection("expenses")
+            .document(userId)
+            .collection("user_expense_entries")
+            .get()
+            .addOnSuccessListener { result ->
+                val filename = "ExpenseExport_${System.currentTimeMillis()}.csv"
+                val file = File(context.getExternalFilesDir(null), filename)
+
+                try {
+                    FileWriter(file).use { writer ->
+                        writer.append("Description,Amount,Category,Date,PhotoUrl\n")
+                        for (doc in result) {
+                            val description = doc.getString("description") ?: ""
+                            val amount = doc.getDouble("amount") ?: 0.0
+                            val category = doc.getString("category") ?: ""
+                            val date = doc.getTimestamp("date")?.toDate()?.toString() ?: ""
+                            val photoUrl = doc.getString("photoUrl") ?: ""
+
+                            writer.append("\"$description\",$amount,\"$category\",\"$date\",\"$photoUrl\"\n")
+                        }
+                    }
+                    onComplete(true, file.absolutePath)
+                } catch (e: Exception) {
+                    onComplete(false, "Error writing CSV: ${e.message}")
+                }
+            }
+            .addOnFailureListener { e ->
+                onComplete(false, "Error fetching expenses: ${e.message}")
+            }
+    }
+
 }
