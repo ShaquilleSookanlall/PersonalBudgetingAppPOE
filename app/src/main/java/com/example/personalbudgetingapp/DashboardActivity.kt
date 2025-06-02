@@ -6,18 +6,16 @@ import android.view.View
 import android.widget.Toast
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
+import com.example.personalbudgetingapp.data.FirebaseService
 import com.example.personalbudgetingapp.databinding.ActivityDashboardBinding
 import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import java.io.File
+
 
 class DashboardActivity : BaseActivity() {
 
     private lateinit var binding: ActivityDashboardBinding
     private lateinit var auth: FirebaseAuth
-    private lateinit var db: AppDatabase
+    private val firebaseService = FirebaseService()
 
     private val presetCategories = listOf(
         "Food", "Transport", "Utilities", "Health", "Education",
@@ -29,25 +27,24 @@ class DashboardActivity : BaseActivity() {
         Log.d(TAG, "onCreate called")
 
         binding = DataBindingUtil.setContentView(this, R.layout.activity_dashboard)
-        db = AppDatabase.getDatabase(this)
-        ensureDefaultCategories()
-
         auth = FirebaseAuth.getInstance()
 
-        // ✅ Show user email dynamically
+        // ✅ Display user email
         val userEmail = auth.currentUser?.email ?: "Guest"
         binding.tvUserEmail.text = "Welcome, $userEmail"
 
-        // ✅ Load and show user's budget goal
-        CoroutineScope(Dispatchers.IO).launch {
-            val goal = db.appDao().getBudgetGoal()
+        // ✅ Load budget goal from Firebase
+        firebaseService.getBudgetGoal { goal ->
             goal?.let {
                 val display = "Min: R%.2f, Max: R%.2f".format(it.minGoal, it.maxGoal)
-                runOnUiThread {
-                    binding.tvBudgetAmount.text = display
-                }
+                binding.tvBudgetAmount.text = display
+            } ?: run {
+                binding.tvBudgetAmount.text = "⚠️ No budget goal set"
             }
         }
+
+        // ✅ Seed default categories to Firebase
+        seedDefaultCategories()
 
         // ✅ Card navigation
         binding.cardSetBudgetGoals.setOnClickListener {
@@ -62,12 +59,12 @@ class DashboardActivity : BaseActivity() {
             loadFragment(ViewCategoryTotalsFragment())
         }
 
-        // ✅ FAB for creating new entries
+        // ✅ Floating action button to create entry
         binding.fabCreateEntry.setOnClickListener {
             loadFragment(CreateEntryFragment())
         }
 
-        // ✅ Bottom navigation
+        // ✅ Bottom navigation handling
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_month -> {
@@ -82,7 +79,7 @@ class DashboardActivity : BaseActivity() {
                     true
                 }
                 R.id.nav_dashboard -> {
-                    loadFragment(DashboardFragment()) // ✅ Load graph-based dashboard
+                    loadFragment(DashboardFragment())
                     true
                 }
                 R.id.nav_profile -> {
@@ -93,37 +90,9 @@ class DashboardActivity : BaseActivity() {
             }
         }
 
-        // ✅ Export to CSV
+        // ✅ CSV Export placeholder (you can implement Firebase data download here)
         binding.btnExportCSV.setOnClickListener {
-            CoroutineScope(Dispatchers.IO).launch {
-                val userId = auth.currentUser?.uid ?: return@launch
-                val entries = db.appDao().getAllEntriesForUser(userId)
-
-                if (entries.isEmpty()) {
-                    runOnUiThread {
-                        Toast.makeText(this@DashboardActivity, "No entries to export", Toast.LENGTH_SHORT).show()
-                    }
-                    return@launch
-                }
-
-                val csvBuilder = StringBuilder()
-                csvBuilder.append("Date,Description,Amount,Category,PhotoUri\n")
-
-                val categories = db.appDao().getAllCategories().associateBy { it.id }
-
-                for (entry in entries) {
-                    val categoryName = categories[entry.categoryId]?.name ?: "Unknown"
-                    csvBuilder.append("${entry.date},\"${entry.description}\",${entry.amount},$categoryName,${entry.photoUri ?: ""}\n")
-                }
-
-                val fileName = "expense_export_${System.currentTimeMillis()}.csv"
-                val file = File(getExternalFilesDir(null), fileName)
-                file.writeText(csvBuilder.toString())
-
-                runOnUiThread {
-                    Toast.makeText(this@DashboardActivity, "Exported to ${file.absolutePath}", Toast.LENGTH_LONG).show()
-                }
-            }
+            Toast.makeText(this, "Export not yet implemented with Firebase", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -140,17 +109,15 @@ class DashboardActivity : BaseActivity() {
             .commit()
     }
 
-    private fun ensureDefaultCategories() {
-        CoroutineScope(Dispatchers.IO).launch {
-            val existingCategories = db.appDao().getAllCategories()
-            val existingNames = existingCategories.map { it.name }
+    private fun seedDefaultCategories() {
+        firebaseService.getAllCategories { existing ->
+            val existingNames = existing.map { it.name }
+            val newCategories = presetCategories.filterNot { existingNames.contains(it) }
 
-            for (categoryName in presetCategories) {
-                if (existingNames.contains(categoryName)) continue
-
-                val isDeleted = db.appDao().isCategoryDeletedByName(categoryName)
-                if (!isDeleted) {
-                    db.appDao().insertCategory(Category(name = categoryName))
+            newCategories.forEach { name ->
+                firebaseService.uploadCategory(Category(name = name)) { success ->
+                    if (success) Log.d(TAG, "Seeded category: $name")
+                    else Log.e(TAG, "Failed to seed category: $name")
                 }
             }
         }

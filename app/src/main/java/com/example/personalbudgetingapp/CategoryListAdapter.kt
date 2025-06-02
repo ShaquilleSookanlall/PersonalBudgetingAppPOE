@@ -6,17 +6,15 @@ import android.widget.PopupMenu
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.RecyclerView
+import com.example.personalbudgetingapp.data.FirebaseService
 import com.example.personalbudgetingapp.databinding.ItemCategoryNameBinding
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class CategoryListAdapter(
     private var categories: List<Category>,
-    private val db: AppDatabase,
     private val onCategoryDeleted: () -> Unit
 ) : RecyclerView.Adapter<CategoryListAdapter.ViewHolder>() {
+
+    private val firebaseService = FirebaseService()
 
     inner class ViewHolder(val binding: ItemCategoryNameBinding) :
         RecyclerView.ViewHolder(binding.root)
@@ -34,14 +32,13 @@ class CategoryListAdapter(
             val popup = PopupMenu(view.context, view)
             popup.menuInflater.inflate(R.menu.category_menu, popup.menu)
 
-            // Optional: Force custom background (requires AppCompat theme override for popupMenuStyle)
             try {
                 val popupField = PopupMenu::class.java.getDeclaredField("mPopup")
                 popupField.isAccessible = true
                 val menu = popupField.get(popup)
                 menu.javaClass.getDeclaredMethod("setForceShowIcon", Boolean::class.java)
                     .invoke(menu, true)
-            } catch (_: Exception) { }
+            } catch (_: Exception) {}
 
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
@@ -50,11 +47,12 @@ class CategoryListAdapter(
                             .setTitle("Confirm Deletion")
                             .setMessage("Are you sure you want to delete '${category.name}'?")
                             .setPositiveButton("Yes") { dialog, _ ->
-                                CoroutineScope(Dispatchers.IO).launch {
-                                    db.appDao().deleteCategoryById(category.id)
-                                    withContext(Dispatchers.Main) {
+                                firebaseService.deleteCategoryById(category.id) { success ->
+                                    if (success) {
                                         Toast.makeText(view.context, "Category deleted", Toast.LENGTH_SHORT).show()
                                         onCategoryDeleted()
+                                    } else {
+                                        Toast.makeText(view.context, "Deletion failed", Toast.LENGTH_SHORT).show()
                                     }
                                 }
                                 dialog.dismiss()
