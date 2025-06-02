@@ -6,16 +6,14 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import com.example.personalbudgetingapp.data.FirebaseService
 import com.example.personalbudgetingapp.databinding.FragmentCreateCategoryBinding
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 class CreateCategoryFragment : Fragment() {
 
     private var _binding: FragmentCreateCategoryBinding? = null
     private val binding get() = _binding!!
-    private lateinit var db: AppDatabase
+    private val firebaseService = FirebaseService()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -28,9 +26,7 @@ class CreateCategoryFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        db = AppDatabase.getDatabase(requireContext())
-
-        binding.btnSaveCategory.setOnClickListener  {
+        binding.btnSaveCategory.setOnClickListener {
             val categoryName = binding.etCategoryName.text.toString().trim()
 
             if (categoryName.isEmpty()) {
@@ -38,11 +34,14 @@ class CreateCategoryFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            CoroutineScope(Dispatchers.IO).launch {
-                db.appDao().insertCategory(Category(name = categoryName))
-                activity?.runOnUiThread {
+            val category = Category(name = categoryName)
+
+            firebaseService.uploadCategory(category) { success ->
+                if (success) {
                     Toast.makeText(context, "Category saved", Toast.LENGTH_SHORT).show()
                     binding.etCategoryName.text.clear()
+                } else {
+                    Toast.makeText(context, "Failed to save category", Toast.LENGTH_SHORT).show()
                 }
             }
         }

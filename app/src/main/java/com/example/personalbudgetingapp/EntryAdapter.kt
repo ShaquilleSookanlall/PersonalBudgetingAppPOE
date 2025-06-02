@@ -25,7 +25,7 @@ class EntryAdapter(
 
     override fun onBindViewHolder(holder: EntryViewHolder, position: Int) {
         val entry = entries[position]
-        val categoryName = categories.find { it.id == entry.categoryId }?.name ?: "Unknown"
+        val categoryName = categories.find { it.id == entry.categoryId.toString() }?.name ?: "Unknown"
 
         holder.binding.tvDescription.text = entry.description
         holder.binding.tvAmount.text = "R${entry.amount}"

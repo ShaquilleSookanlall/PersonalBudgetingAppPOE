@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import com.example.personalbudgetingapp.data.FirebaseService
 import com.github.mikephil.charting.charts.BarChart
 import com.github.mikephil.charting.components.LimitLine
 import com.github.mikephil.charting.data.BarData
@@ -18,16 +19,15 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.*
 
 class DashboardFragment : Fragment() {
 
     private lateinit var barChart: BarChart
     private lateinit var tvBudgetSummary: TextView
-    private lateinit var dbLocal: AppDatabase
 
     private val dbCloud = FirebaseFirestore.getInstance()
+    private val firebaseService = FirebaseService()
     private val userId = FirebaseAuth.getInstance().currentUser?.uid
 
     override fun onCreateView(
@@ -37,7 +37,6 @@ class DashboardFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_dashboard, container, false)
         barChart = view.findViewById(R.id.barChart)
         tvBudgetSummary = view.findViewById(R.id.tvBudgetSummary)
-        dbLocal = AppDatabase.getDatabase(requireContext())
 
         fetchExpensesFromFirebase()
         return view
@@ -67,10 +66,8 @@ class DashboardFragment : Fragment() {
                     totalSpent += amount
                 }
 
-                CoroutineScope(Dispatchers.Main).launch {
-                    showBarChart(categoryTotals)
-                    loadAndShowBudgetSummary(totalSpent)
-                }
+                showBarChart(categoryTotals)
+                loadAndShowBudgetSummary(totalSpent)
             }
             .addOnFailureListener {
                 tvBudgetSummary.text = "⚠️ Failed to load expense data from Firebase."
@@ -78,29 +75,28 @@ class DashboardFragment : Fragment() {
     }
 
     private fun loadAndShowBudgetSummary(totalSpent: Double) {
-        CoroutineScope(Dispatchers.IO).launch {
-            val budgetGoal = dbLocal.appDao().getBudgetGoal()
-            withContext(Dispatchers.Main) {
-                if (budgetGoal != null) {
-                    val min = budgetGoal.minGoal
-                    val max = budgetGoal.maxGoal
-                    val status = when {
-                        totalSpent < min -> "🟡 Below Minimum Goal"
-                        totalSpent > max -> "🔴 Over Budget"
-                        else -> "🟢 Within Budget"
-                    }
-
-                    val summary = """
-                        🔢 Min Goal: R${"%.2f".format(min)}
-                        🔢 Max Goal: R${"%.2f".format(max)}
-                        💰 Total Spent: R${"%.2f".format(totalSpent)}
-                        📊 Status: $status
-                    """.trimIndent()
-
-                    tvBudgetSummary.text = summary
-                } else {
-                    tvBudgetSummary.text = "⚠️ Set your budget goals to enable progress tracking."
+        firebaseService.getBudgetGoal { budgetGoal ->
+            if (budgetGoal != null) {
+                val min = budgetGoal.minGoal
+                val max = budgetGoal.maxGoal
+                val status = when {
+                    totalSpent < min -> "🟡 Below Minimum Goal"
+                    totalSpent > max -> "🔴 Over Budget"
+                    else -> "🟢 Within Budget"
                 }
+
+                val summary = """
+                    🔢 Min Goal: R${"%.2f".format(min)}
+                    🔢 Max Goal: R${"%.2f".format(max)}
+                    💰 Total Spent: R${"%.2f".format(totalSpent)}
+                    📊 Status: $status
+                """.trimIndent()
+
+                tvBudgetSummary.text = summary
+                updateLimitLines(min.toFloat(), max.toFloat())
+            } else {
+                tvBudgetSummary.text = "⚠️ Set your budget goals to enable progress tracking."
+                updateLimitLines(200f, 1000f)
             }
         }
     }
@@ -132,22 +128,25 @@ class DashboardFragment : Fragment() {
         yAxis.setDrawGridLines(false)
         yAxis.removeAllLimitLines()
 
-        // Add goal lines (we'll load real values via RoomDB summary)
-        val defaultMin = 200f
-        val defaultMax = 1000f
+        barChart.axisRight.isEnabled = false
+        barChart.invalidate()
+    }
 
-        val minLine = LimitLine(defaultMin, "Min Goal")
+    private fun updateLimitLines(minGoal: Float, maxGoal: Float) {
+        val yAxis = barChart.axisLeft
+        yAxis.removeAllLimitLines()
+
+        val minLine = LimitLine(minGoal, "Min Goal")
         minLine.lineColor = Color.BLUE
         minLine.lineWidth = 2f
 
-        val maxLine = LimitLine(defaultMax, "Max Goal")
+        val maxLine = LimitLine(maxGoal, "Max Goal")
         maxLine.lineColor = Color.RED
         maxLine.lineWidth = 2f
 
         yAxis.addLimitLine(minLine)
         yAxis.addLimitLine(maxLine)
 
-        barChart.axisRight.isEnabled = false
         barChart.invalidate()
     }
 }

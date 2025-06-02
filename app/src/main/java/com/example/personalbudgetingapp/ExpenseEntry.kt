@@ -1,32 +1,16 @@
 package com.example.personalbudgetingapp
 
 import android.os.Parcelable
-import androidx.room.Entity
-import androidx.room.ForeignKey
-import androidx.room.Index
-import androidx.room.PrimaryKey
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
-@Entity(
-    tableName = "expense_entries",
-    foreignKeys = [
-        ForeignKey(
-            entity = Category::class,
-            parentColumns = ["id"],
-            childColumns = ["categoryId"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ],
-    indices = [Index(value = ["categoryId"]), Index(value = ["userId"])]
-)
 data class ExpenseEntry(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    var firebaseId: String? = null,
-    val date: String,
+    val id: Int = 0,                       // Local-only; not needed in Firebase
+    var firebaseId: String? = null,        // Optional: Store Firestore doc ID
+    val date: String,                      // Format: yyyy-MM-dd
     val description: String,
-    val categoryId: Int,
+    val categoryId: Int,                   // Matches your internal Category list
     val amount: Double,
-    val photoUri: String?,
-    val userId: String
+    val photoUri: String? = null,          // Local file URI
+    val userId: String                     // For filtering user-specific data
 ) : Parcelable

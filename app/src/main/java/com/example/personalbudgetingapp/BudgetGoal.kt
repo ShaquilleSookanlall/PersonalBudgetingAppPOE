@@ -1,11 +1,7 @@
-package com.example.personalbudgetingapp
+package com.example.personalbudgetingapp.model
 
-import androidx.room.Entity
-import androidx.room.PrimaryKey
-
-@Entity(tableName = "budget_goals")
 data class BudgetGoal(
-    @PrimaryKey val id: Int = 1, // Fixed ID since we only store one budget goal range
-    val minGoal: Double,
-    val maxGoal: Double
+    val minGoal: Double = 0.0,
+    val maxGoal: Double = 0.0,
+    val userId: String = ""
 )

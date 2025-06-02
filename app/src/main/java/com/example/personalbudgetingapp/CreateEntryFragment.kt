@@ -13,12 +13,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import com.bumptech.glide.Glide
+import com.example.personalbudgetingapp.data.FirebaseService
 import com.example.personalbudgetingapp.databinding.FragmentCreateEntryBinding
+import com.example.personalbudgetingapp.model.Expense
 import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -27,8 +25,9 @@ class CreateEntryFragment : Fragment() {
 
     private var _binding: FragmentCreateEntryBinding? = null
     private val binding get() = _binding!!
-    private lateinit var db: AppDatabase
     private var photoUri: Uri? = null
+    private val firebaseService = FirebaseService()
+    private var categoryNames: List<String> = emptyList()
 
     private val takePictureLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
         if (success) {
@@ -45,7 +44,17 @@ class CreateEntryFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        db = AppDatabase.getDatabase(requireContext())
+        // Fetch categories from Firebase
+        firebaseService.getAllCategories { categories ->
+            categoryNames = categories.map { it.name }
+            val adapter = ArrayAdapter(
+                requireContext(),
+                android.R.layout.simple_spinner_item,
+                categoryNames
+            )
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            binding.spinnerCategory.adapter = adapter
+        }
 
         binding.etDate.setOnClickListener {
             val calendar = Calendar.getInstance()
@@ -58,19 +67,6 @@ class CreateEntryFragment : Fragment() {
                 calendar.get(Calendar.MONTH),
                 calendar.get(Calendar.DAY_OF_MONTH)
             ).show()
-        }
-
-        CoroutineScope(Dispatchers.IO).launch {
-            val categories = db.appDao().getAllCategories()
-            withContext(Dispatchers.Main) {
-                val adapter = ArrayAdapter(
-                    requireContext(),
-                    android.R.layout.simple_spinner_item,
-                    categories.map { it.name }
-                )
-                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                binding.spinnerCategory.adapter = adapter
-            }
         }
 
         binding.btnAddPhoto.setOnClickListener {
@@ -100,58 +96,27 @@ class CreateEntryFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            CoroutineScope(Dispatchers.IO).launch {
-                val category = db.appDao().getAllCategories().find { it.name == categoryName }
-                if (category != null) {
-                    val entry = ExpenseEntry(
-                        date = date,
-                        description = description,
-                        categoryId = category.id,
-                        amount = amount,
-                        photoUri = photoUri?.toString(),
-                        userId = userId
-                    )
-                    db.appDao().insertExpenseEntry(entry)
+            val parsedDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(date) ?: Date()
 
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(context, "Entry saved locally", Toast.LENGTH_SHORT).show()
-                        clearFields()
-                    }
+            val expense = Expense(
+                amount = amount,
+                category = categoryName,
+                description = description,
+                date = parsedDate
+            )
 
-                    // ✅ Upload to Firebase using Expense data class
-                    val firebaseService = com.example.personalbudgetingapp.data.FirebaseService()
-                    val expense = com.example.personalbudgetingapp.model.Expense(
-                        amount = amount,
-                        category = categoryName,
-                        description = description,
-                        date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(date)
-                            ?: Date()
-                    )
-
-                    firebaseService.uploadExpense(expense) { success ->
-                        CoroutineScope(Dispatchers.Main).launch {
-                            if (success) {
-                                Toast.makeText(context, "Synced to Firebase", Toast.LENGTH_SHORT)
-                                    .show()
-                            } else {
-                                Toast.makeText(
-                                    context,
-                                    "Failed to sync with Firebase",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        }
-                    }
+            firebaseService.uploadExpense(expense) { success ->
+                if (success) {
+                    Toast.makeText(context, "Expense saved", Toast.LENGTH_SHORT).show()
+                    clearFields()
                 } else {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(context, "Category not found", Toast.LENGTH_SHORT).show()
-                    }
+                    Toast.makeText(context, "Failed to save expense", Toast.LENGTH_SHORT).show()
                 }
             }
         }
     }
 
-        private fun createImageFile(): File {
+    private fun createImageFile(): File {
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val storageDir = requireContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES)
         return File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)

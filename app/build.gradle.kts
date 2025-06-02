@@ -3,8 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.services)
-    kotlin("kapt")
-    id("kotlin-parcelize")
+    id("kotlin-parcelize") // Room removed, no kapt needed
 }
 
 android {
@@ -61,15 +60,11 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.navigation.compose)
 
-    // RoomDB
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
-    kapt(libs.androidx.room.compiler)
-
     // Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.firestore.ktx)
+    implementation("com.google.firebase:firebase-storage-ktx") // ✅ Added for photo uploads
 
     // Image loading
     implementation(libs.coil.compose)

@@ -14,6 +14,7 @@ import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import com.bumptech.glide.Glide
 import com.example.personalbudgetingapp.databinding.FragmentEditEntryBinding
+import com.example.personalbudgetingapp.data.FirebaseService
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,9 +28,10 @@ class EditEntryFragment : Fragment() {
 
     private var _binding: FragmentEditEntryBinding? = null
     private val binding get() = _binding!!
-    private lateinit var db: AppDatabase
     private var entry: ExpenseEntry? = null
     private var photoUri: Uri? = null
+    private val firebaseService = FirebaseService()
+    private val firestore = FirebaseFirestore.getInstance()
 
     private val takePictureLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
         if (success) {
@@ -45,8 +47,6 @@ class EditEntryFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        db = AppDatabase.getDatabase(requireContext())
-
         entry = arguments?.getParcelable("entry")
 
         binding.etDate.setOnClickListener {
@@ -56,27 +56,25 @@ class EditEntryFragment : Fragment() {
             }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
         }
 
-        CoroutineScope(Dispatchers.IO).launch {
-            val categories = db.appDao().getAllCategories()
-            withContext(Dispatchers.Main) {
-                val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, categories.map { it.name })
-                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                binding.spinnerCategory.adapter = adapter
+        firebaseService.getAllCategories { categories ->
+            val categoryNames = categories.map { it.name }
+            val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, categoryNames)
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            binding.spinnerCategory.adapter = adapter
 
-                entry?.let { e ->
-                    binding.etDate.setText(e.date)
-                    binding.etDescription.setText(e.description)
-                    binding.etAmount.setText(e.amount.toString())
+            entry?.let { e ->
+                binding.etDate.setText(e.date)
+                binding.etDescription.setText(e.description)
+                binding.etAmount.setText(e.amount.toString())
 
-                    val categoryName = categories.find { it.id == e.categoryId }?.name
-                    val position = categories.indexOfFirst { it.name == categoryName }
-                    if (position >= 0) binding.spinnerCategory.setSelection(position)
+                val categoryName = categories.find { it.id == e.categoryId.toString() }?.name
+                val position = categoryNames.indexOf(categoryName)
+                if (position >= 0) binding.spinnerCategory.setSelection(position)
 
-                    e.photoUri?.let {
-                        photoUri = Uri.parse(it)
-                        binding.ivPhoto.visibility = View.VISIBLE
-                        Glide.with(this@EditEntryFragment).load(photoUri).into(binding.ivPhoto)
-                    }
+                e.photoUri?.let {
+                    photoUri = Uri.parse(it)
+                    binding.ivPhoto.visibility = View.VISIBLE
+                    Glide.with(this).load(photoUri).into(binding.ivPhoto)
                 }
             }
         }
@@ -95,59 +93,47 @@ class EditEntryFragment : Fragment() {
             val newDate = binding.etDate.text.toString()
             val newDescription = binding.etDescription.text.toString()
             val newAmount = binding.etAmount.text.toString().toDoubleOrNull() ?: 0.0
-            val newCategoryPosition = binding.spinnerCategory.selectedItemPosition
+            val newCategory = binding.spinnerCategory.selectedItem?.toString() ?: return@setOnClickListener
+
+            if (entry == null) return@setOnClickListener
+            val userId = entry!!.userId
 
             CoroutineScope(Dispatchers.IO).launch {
-                val categories = db.appDao().getAllCategories()
-                val selectedCategory = categories.getOrNull(newCategoryPosition)
-                if (entry != null && selectedCategory != null) {
-                    val updatedEntry = entry!!.copy(
-                        date = newDate,
-                        description = newDescription,
-                        amount = newAmount,
-                        categoryId = selectedCategory.id,
-                        photoUri = photoUri?.toString()
-                    )
+                val parsedOldDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(entry!!.date)
+                val parsedNewDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(newDate)
 
-                    // Update Firebase
-                    val userId = updatedEntry.userId
-                    val firestore = FirebaseFirestore.getInstance()
-                    val userCollection = firestore.collection("expenses")
-                        .document(userId)
-                        .collection("user_expense_entries")
-
-                    userCollection
-                        .whereEqualTo("description", entry!!.description)
-                        .whereEqualTo("amount", entry!!.amount)
-                        .whereEqualTo("date", SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(entry!!.date))
-                        .get()
-                        .addOnSuccessListener { documents ->
-                            for (doc in documents) {
-                                doc.reference.update(
-                                    mapOf(
-                                        "description" to updatedEntry.description,
-                                        "amount" to updatedEntry.amount,
-                                        "date" to SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(updatedEntry.date),
-                                        "category" to selectedCategory.name,
-                                        "photoUri" to updatedEntry.photoUri
-                                    )
+                firestore.collection("expenses")
+                    .document(userId)
+                    .collection("user_expense_entries")
+                    .whereEqualTo("description", entry!!.description)
+                    .whereEqualTo("amount", entry!!.amount)
+                    .whereEqualTo("date", parsedOldDate)
+                    .get()
+                    .addOnSuccessListener { documents ->
+                        for (doc in documents) {
+                            doc.reference.update(
+                                mapOf(
+                                    "description" to newDescription,
+                                    "amount" to newAmount,
+                                    "date" to parsedNewDate,
+                                    "category" to newCategory,
+                                    "photoUri" to photoUri?.toString()
                                 )
-                            }
+                            )
+                        }
 
-                            CoroutineScope(Dispatchers.Main).launch {
-                                Toast.makeText(requireContext(), "Entry updated", Toast.LENGTH_SHORT).show()
-                                requireActivity().supportFragmentManager.popBackStack()
-                            }
+                        CoroutineScope(Dispatchers.Main).launch {
+                            Toast.makeText(requireContext(), "Entry updated", Toast.LENGTH_SHORT).show()
+                            requireActivity().supportFragmentManager.popBackStack()
                         }
-                        .addOnFailureListener {
-                            CoroutineScope(Dispatchers.Main).launch {
-                                Toast.makeText(requireContext(), "Failed to update entry in Firebase", Toast.LENGTH_SHORT).show()
-                            }
+                    }
+                    .addOnFailureListener {
+                        CoroutineScope(Dispatchers.Main).launch {
+                            Toast.makeText(requireContext(), "Failed to update entry in Firebase", Toast.LENGTH_SHORT).show()
                         }
-                }
+                    }
             }
         }
-
     }
 
     private fun createImageFile(): File {

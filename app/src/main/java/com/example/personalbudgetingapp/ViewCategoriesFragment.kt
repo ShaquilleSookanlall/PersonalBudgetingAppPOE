@@ -6,17 +6,15 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.personalbudgetingapp.data.FirebaseService
 import com.example.personalbudgetingapp.databinding.FragmentViewCategoriesBinding
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class ViewCategoriesFragment : Fragment() {
 
     private var _binding: FragmentViewCategoriesBinding? = null
     private val binding get() = _binding!!
-    private lateinit var db: AppDatabase
+    private val firebaseService = FirebaseService()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -29,7 +27,6 @@ class ViewCategoriesFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        db = AppDatabase.getDatabase(requireContext())
 
         binding.rvCategories.layoutManager = LinearLayoutManager(context)
         loadCategories()
@@ -44,12 +41,9 @@ class ViewCategoriesFragment : Fragment() {
     }
 
     private fun loadCategories() {
-        CoroutineScope(Dispatchers.IO).launch {
-            val categories = db.appDao().getAllCategories()
-            activity?.runOnUiThread {
-                binding.rvCategories.adapter = CategoryListAdapter(categories, db) {
-                    loadCategories()
-                }
+        firebaseService.getAllCategories { categories ->
+            binding.rvCategories.adapter = CategoryListAdapter(categories) {
+                loadCategories() // Refresh after deletion
             }
         }
     }

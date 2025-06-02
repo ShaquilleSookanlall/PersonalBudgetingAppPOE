@@ -8,19 +8,22 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.personalbudgetingapp.data.FirebaseService
 import com.example.personalbudgetingapp.databinding.FragmentViewCategoryTotalsBinding
+import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.util.Calendar
-import com.google.firebase.auth.FirebaseAuth
-
+import java.text.SimpleDateFormat
+import java.util.*
 
 class ViewCategoryTotalsFragment : Fragment() {
 
     private var _binding: FragmentViewCategoryTotalsBinding? = null
     private val binding get() = _binding!!
-    private lateinit var db: AppDatabase
+    private val firebaseService = FirebaseService()
+    private val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -32,13 +35,11 @@ class ViewCategoryTotalsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        db = AppDatabase.getDatabase(requireContext())
         binding.rvCategoryTotals.layoutManager = LinearLayoutManager(context)
 
         // Load all totals on start
         loadCategoryTotals("0000-01-01", "9999-12-31")
 
-        // Date pickers
         binding.etStartDate.setOnClickListener {
             val calendar = Calendar.getInstance()
             DatePickerDialog(requireContext(), { _, year, month, day ->
@@ -64,14 +65,23 @@ class ViewCategoryTotalsFragment : Fragment() {
 
     private fun loadCategoryTotals(start: String, end: String) {
         CoroutineScope(Dispatchers.IO).launch {
-            val categories = db.appDao().getAllCategories()
-            val totals = mutableListOf<Pair<Category, Double>>()
-            for (category in categories) {
-                val total = db.appDao().getTotalForCategory(category.id, start, end, FirebaseAuth.getInstance().currentUser?.uid ?: "") ?: 0.0
-                totals.add(category to total)
-            }
-            activity?.runOnUiThread {
-                binding.rvCategoryTotals.adapter = CategoryTotalAdapter(totals)
+            firebaseService.getAllCategories { categories ->
+                firebaseService.getUserExpenses { expenses ->
+                    val startDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(start) ?: Date(0)
+                    val endDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(end) ?: Date()
+
+                    val totals = categories.map { category ->
+                        val total = expenses
+                            .filter { it.category == category.name }
+                            .filter { it.date.after(startDate) && it.date.before(Date(endDate.time + 86400000)) }
+                            .sumOf { it.amount }
+                        category to total
+                    }
+
+                    activity?.runOnUiThread {
+                        binding.rvCategoryTotals.adapter = CategoryTotalAdapter(totals)
+                    }
+                }
             }
         }
     }
