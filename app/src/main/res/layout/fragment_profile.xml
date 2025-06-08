@@ -5,50 +5,90 @@
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#F4F9F9">
+        android:background="?android:attr/windowBackground">
 
-        <LinearLayout
+        <ScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="24dp"
-            android:gravity="center_vertical"
-            android:layout_marginTop="40dp">
+            android:layout_height="match_parent">
 
-            <ImageView
-                android:id="@+id/ivProfileImage"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:src="@drawable/ic_profile_placeholder"
-                android:layout_marginEnd="16dp"
-                android:background="@drawable/circle"
-                android:scaleType="centerCrop"
-                android:contentDescription="Profile Image" />
-
-            <TextView
-                android:id="@+id/tvUserEmail"
-                android:layout_width="0dp"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="user@example.com"
-                android:textSize="16sp"
-                android:textColor="#212121"
-                android:textStyle="bold" />
+                android:orientation="vertical"
+                android:padding="24dp"
+                android:gravity="center_horizontal">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnLogout"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Logout"
-                android:backgroundTint="#D32F2F"
-                android:textColor="#FFFFFF"
-                android:icon="@drawable/ic_logout"
-                app:iconTint="#FFFFFF"
-                app:cornerRadius="24dp"
-                app:iconGravity="textStart" />
-        </LinearLayout>
+                <!-- Profile Header -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="24dp">
 
-        <!-- Optional scrollable content can go here -->
+                    <ImageView
+                        android:id="@+id/ivProfileImage"
+                        android:layout_width="72dp"
+                        android:layout_height="72dp"
+                        android:src="@drawable/ic_profile_placeholder"
+                        android:background="@drawable/circle"
+                        android:scaleType="centerCrop"
+                        android:layout_marginEnd="16dp"
+                        android:contentDescription="Profile Image" />
 
+                    <TextView
+                        android:id="@+id/tvUserEmail"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="user@example.com"
+                        android:textSize="18sp"
+                        android:textColor="?android:textColorPrimary"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- Profile Info -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Account Overview"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp"
+                    android:textColor="?android:textColorPrimary" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Welcome to your budgeting profile!"
+                    android:textSize="16sp"
+                    android:textColor="?android:textColorSecondary"
+                    android:layout_marginBottom="24dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="• View and export your budgeting data\n• Customize your budget goals\n• Track your monthly spending trends"
+                    android:textSize="14sp"
+                    android:lineSpacingExtra="4dp"
+                    android:textColor="?android:textColorSecondary"
+                    android:layout_marginBottom="36dp" />
+
+                <!-- Big Logout Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnLogout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Logout"
+                    android:icon="@drawable/ic_logout"
+                    app:iconGravity="textStart"
+                    app:iconTint="@android:color/white"
+                    android:textColor="@android:color/white"
+                    android:backgroundTint="#D32F2F"
+                    app:cornerRadius="32dp"
+                    android:padding="16dp"
+                    android:elevation="8dp" />
+            </LinearLayout>
+        </ScrollView>
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 </layout>

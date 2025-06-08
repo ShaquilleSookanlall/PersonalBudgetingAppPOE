@@ -91,7 +91,7 @@ class DashboardActivity : BaseActivity() {
         }
 
         // ✅ CSV Export placeholder (you can implement Firebase data download here)
-        binding.btnExportCSV.setOnClickListener {
+        binding.btnExportCSV.setOnClickListener{
             firebaseService.exportExpensesToCSV(this) { success, message ->
                 runOnUiThread {
                     if (success) {
