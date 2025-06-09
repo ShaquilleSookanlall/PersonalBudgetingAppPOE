@@ -1,50 +1,65 @@
-# Personal Budgeting App
+# 💰 Personal Budgeting App
 
-A modern Kotlin-based budgeting app to help users track expenses, set budget goals, and view insights through interactive graphs. Built as part of the PROG7313 Portfolio of Evidence (Part 3), it combines local and cloud storage with gamified progress tracking to make budgeting simple and engaging.
+A modern Android application to help users manage and track their personal expenses with ease. The app includes budget goal setting, categorized expense tracking, image attachment, and Firebase-based backup and authentication.
+https://youtu.be/LweRZM5zu3c
 
 ---
 
 ## 📱 Features
 
-- 🔐 **User Authentication** (Firebase)
-- 🧾 **Add Expenses** with amount, date, category, and optional photo
-- 📂 **Custom Categories** for expense classification
-- 🎯 **Monthly Budget Goals** (Min & Max)
-- 📅 **Filter by Date Range** to view entries
-- 📊 **Graph View** showing category spending with goal comparison (MPAndroidChart)
-- ✅ **Cloud Sync** via Firebase Firestore
-- 💾 **Offline Storage** via RoomDB
-- 🏆 **Gamification** (add your own two features here)
-- 📸 **Attach Receipts** to expense entries
+- 🔐 **User Authentication** via Firebase (Email/Password)
+- 🧾 **Expense Entry Management**
+  - Add, view, edit, and delete expenses
+  - Attach images to each expense
+- 📊 **Category-Based Tracking**
+  - View total expenses per category
+  - Seeded with preset categories
+- 🎯 **Budget Goal Setting**
+  - Set monthly min and max goals
+  - Budget progress displayed
+- 📂 **Export to CSV**
+  - One-click export of expenses to a downloadable CSV file
+- 🌐 **Firebase Integration**
+  - Cloud Firestore for data
+  - Firebase Storage for image upload
+  - Authentication with FirebaseAuth
+- 🧭 **Smooth Navigation**
+  - Dashboard overview
+  - Bottom navigation bar with fragment transitions
+  - ScrollView and FragmentContainer managed dynamically
 
 ---
 
-## 🛠️ Technologies Used
+## 🛠️ Tech Stack
 
-| Technology       | Purpose                                              |
-|------------------|------------------------------------------------------|
-| Kotlin (Android) | Main development language                           |
-| Firebase Auth     | User registration & login                          |
-| Firestore         | Online data storage & syncing                      |
-| RoomDB            | Local storage for offline support                  |
-| MPAndroidChart    | Graphs for spending insights                       |
-| Glide / Coil      | Image handling (receipt photos)                    |
-| Jetpack ViewModel | State management & UI logic (optional)             |
-| DataBinding       | Efficient view binding                             |
-
----
-
-## 🔄 Data Flow Overview
-
-- Expenses are first saved to RoomDB for offline availability.
-- They are also uploaded to Firestore for cross-device sync.
-- Graphs are generated based on the last 30 days of expenses.
-- Goal limits are shown using colored lines.
+- **Kotlin** + **Android SDK**
+- **Firebase Authentication**
+- **Cloud Firestore** (Database)
+- **Firebase Storage** (Image files)
+- **RoomDB** (Optional local use)
+- **Material UI Components**
+- **MVVM-ish architecture** with FirebaseService acting as Repository
 
 ---
 
 ## 🚀 Getting Started
 
-1. Clone the repo:
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/PersonalBudgetingApp.git
+### Prerequisites
+
+- Android Studio Dolphin or newer
+- Android device or emulator
+- Firebase project with Authentication, Firestore, and Storage enabled
+
+### Firebase Setup
+
+1. Create a Firebase Project at [firebase.google.com](https://firebase.google.com)
+2. Enable **Email/Password Authentication**
+3. Create **Firestore Database**
+4. Enable **Firebase Storage**
+5. Download `google-services.json` and place it inside `app/`
+
+### Run the App
+
+```bash
+git clone https://github.com/your-username/PersonalBudgetingApp.git
+cd PersonalBudgetingApp
