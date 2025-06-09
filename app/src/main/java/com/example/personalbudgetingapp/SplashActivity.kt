@@ -12,6 +12,7 @@ class SplashActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_splash)
+        setupSystemBars() // Call after setContentView to ensure DecorView is initialized
 
         val jump1 = AnimationUtils.loadAnimation(this, R.anim.jump1)
         val jump2 = AnimationUtils.loadAnimation(this, R.anim.jump2)
