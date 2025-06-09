@@ -1,7 +1,8 @@
 # 💰 Personal Budgeting App
 
 A modern Android application to help users manage and track their personal expenses with ease. The app includes budget goal setting, categorized expense tracking, image attachment, and Firebase-based backup and authentication.
-https://youtu.be/LweRZM5zu3c
+
+App demonstation: https://youtu.be/LweRZM5zu3c
 
 ---
 
